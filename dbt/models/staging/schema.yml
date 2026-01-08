@@ -1,0 +1,29 @@
+version: 2
+
+sources:
+  - name: silver
+    schema: silver
+    tables:
+      - name: enriched_trip_events
+      - name: vehicle_state
+      - name: alerts_history
+
+models:
+  - name: stg_trips
+    description: "Staging view over enriched trip events from Silver layer"
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_vehicles
+    description: "Staging view over vehicle state"
+    columns:
+      - name: vehicle_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_alerts
+    description: "Staging view over alerts history"
