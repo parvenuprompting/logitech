@@ -43,7 +43,7 @@ MANIFEST
 dbt/target/
 dbt/dbt_packages/
 dbt/logs/
-dbt/profiles.yml
+# dbt/profiles.yml
 
 # Databricks
 .databricks/

@@ -1,0 +1,46 @@
+{
+    "job_cluster_policy": {
+        "name": "LogiTech_Job_Policy",
+        "definition": {
+            "spark_conf.spark.databricks.cluster.profile": {
+                "type": "fixed",
+                "value": "serverless"
+            },
+            "custom_tags.Team": {
+                "type": "fixed",
+                "value": "DataPlatform"
+            },
+            "autotermination_minutes": {
+                "type": "fixed",
+                "value": 30
+            },
+            "node_type_id": {
+                "type": "allowlist",
+                "values": [
+                    "Standard_DS3_v2",
+                    "Standard_DS4_v2",
+                    "Standard_D8s_v3"
+                ]
+            },
+            "driver_node_type_id": {
+                "type": "fixed",
+                "value": "Standard_DS3_v2"
+            }
+        }
+    },
+    "interactive_cluster_policy": {
+        "name": "LogiTech_Dev_Policy",
+        "definition": {
+            "autotermination_minutes": {
+                "type": "range",
+                "minValue": 10,
+                "maxValue": 60
+            },
+            "num_workers": {
+                "type": "range",
+                "minValue": 1,
+                "maxValue": 4
+            }
+        }
+    }
+}
