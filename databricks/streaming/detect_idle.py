@@ -96,17 +96,41 @@ def process_batch(df, epoch_id):
             col("window.end").alias("detection_time")
         )
 
-    # Rate Limiting (per batch simplified)
-    # In prod: stateful filtering needed. Hier: cap alerts per batch per truck.
-    alerts = alerts.dropDuplicates(["vehicle_id"]) 
+    # Rate Limiting & DLQ Logic
+    # We want to LIMIT alerts per vehicle per batch (simplified rate limit).
+    # All excess alerts go to DLQ.
     
-    # --- Latency Monitoring ---
-    # Calculate end-to-end latency (System Clock - Event Timestamp)
-    # We use detection_time (window end) as approximation of "event time" for the aggregate, 
-    # but strictly it's (Processing Time - Max Event Time in Window).
-    # For individual alerts, we can use current_timestamp() - detection_time.
+    from pyspark.sql.window import Window
+    
+    # Rank alerts per vehicle to identify duplicates/excess in this batch
+    w = Window.partitionBy("vehicle_id").orderBy("detection_time")
+    alerts_ranked = alerts.withColumn("rank", row_number().over(w))
+    
+    # Split flow
+    valid_alerts = alerts_ranked.filter("rank == 1").drop("rank")
+    excess_alerts = alerts_ranked.filter("rank > 1").select(
+        col("vehicle_id"),
+        col("alert_timestamp"),
+        col("alert_type"),
+        col("message"),
+        col("detection_time"),
+        lit("rate_limit_exceeded").alias("failure_reason"),
+        current_timestamp().alias("dlq_ingest_time")
+    )
+    
+    # Write to DLQ
+    if excess_alerts.count() > 0:
+        print(f"WARNING: {excess_alerts.count()} alerts exceeded rate limit. Sending to DLQ.")
+        excess_alerts.write \
+            .format("delta") \
+            .mode("append") \
+            .saveAsTable("monitoring.alert_dead_letter_queue")
+
+    # Continue with Valid Alerts
+    alerts = valid_alerts
     
     if alerts.count() > 0:
+        # --- Latency Monitoring --- (on valid alerts only)
         # Calc average latency for this batch of alerts
         # Note: In Spark, direct subtraction of timestamp gives interval. Cast to long for seconds/millis.
         alerts_with_latency = alerts.withColumn(
