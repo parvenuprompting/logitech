@@ -1,0 +1,21 @@
+{
+    "bindings": [
+        {
+            "type": "cosmosDBTrigger",
+            "name": "documents",
+            "direction": "in",
+            "leaseCollectionName": "leases",
+            "connectionStringSetting": "CosmosDBConnection",
+            "databaseName": "fleet_db",
+            "collectionName": "active_alerts",
+            "createLeaseCollectionIfNotExists": true
+        },
+        {
+            "type": "signalR",
+            "name": "signalRMessages",
+            "hubName": "alerts",
+            "direction": "out",
+            "connectionStringSetting": "SignalRConnection"
+        }
+    ]
+}
