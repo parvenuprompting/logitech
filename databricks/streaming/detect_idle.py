@@ -100,7 +100,35 @@ def process_batch(df, epoch_id):
     # In prod: stateful filtering needed. Hier: cap alerts per batch per truck.
     alerts = alerts.dropDuplicates(["vehicle_id"]) 
     
+    # --- Latency Monitoring ---
+    # Calculate end-to-end latency (System Clock - Event Timestamp)
+    # We use detection_time (window end) as approximation of "event time" for the aggregate, 
+    # but strictly it's (Processing Time - Max Event Time in Window).
+    # For individual alerts, we can use current_timestamp() - detection_time.
+    
     if alerts.count() > 0:
+        # Calc average latency for this batch of alerts
+        # Note: In Spark, direct subtraction of timestamp gives interval. Cast to long for seconds/millis.
+        alerts_with_latency = alerts.withColumn(
+            "latency_seconds", 
+            col("alert_timestamp").cast("long") - col("detection_time").cast("long")
+        )
+        
+        # Log Metrics
+        metrics = alerts_with_latency.select(
+            lit(ALERT_TYPE).alias("alert_type"),
+            mean("latency_seconds").alias("avg_latency"),
+            percentile_approx("latency_seconds", 0.95).alias("p95_latency"),
+            max("latency_seconds").alias("max_latency"),
+            count("*").alias("alert_count"),
+            current_timestamp().alias("log_time")
+        )
+        
+        metrics.write \
+            .format("delta") \
+            .mode("append") \
+            .saveAsTable("monitoring.latency_metrics")
+
         # Write to Cosmos DB (via Spark Connector)
         # alerts.write.format("cosmos.oltp")...
         print(f"Detected {alerts.count()} alerts. Writing to Cosmos DB...")
