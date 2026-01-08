@@ -26,21 +26,14 @@ jobs:
       - name: Install dbt-databricks
         run: pip install dbt-databricks
 
+      - name: Configure dbt profile
+        run: |
+          mkdir -p ~/.dbt
+          cp dbt/profiles.yml ~/.dbt/profiles.yml
+          echo "Profile copied to ~/.dbt/profiles.yml"
+
       - name: dbt Deps
-        run: |
-          cd dbt
-          ls -la
-          dbt deps --profiles-dir .
-
-      - name: Debug Info
-        run: |
-          echo "Current directory: $(pwd)"
-          ls -R
-          echo "Content of dbt/profiles.yml:"
-          cat dbt/profiles.yml
-
-      - name: dbt Debug
-        run: cd dbt && dbt debug --profiles-dir .
+        run: cd dbt && dbt deps
 
       - name: dbt Build (Run & Test)
-        run: cd dbt && dbt build --target dev --profiles-dir .
+        run: cd dbt && dbt build --target dev
