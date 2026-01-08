@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: int_trip_segments
+    description: "Calculated segments between consecutive telemetry points (delta time, delta distance)"
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+
+  - name: int_daily_vehicle_stats
+    description: "Aggregated daily statistics per vehicle"
+    columns:
+      - name: vehicle_day_id
+        description: "Primary key: vehicle_id + date"
+        tests:
+          - unique
+          - not_null
+      - name: total_distance_km
+        tests:
+          - not_null
