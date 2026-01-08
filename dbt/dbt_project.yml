@@ -1,0 +1,37 @@
+
+name: 'logitech_fleet'
+version: '1.0.0'
+config-version: 2
+
+profile: 'logitech_lakehouse'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  logitech_fleet:
+    # Config for all models
+    +schema: gold
+    
+    staging:
+      +materialized: view
+      +schema: gold_staging
+      
+    intermediate:
+      +materialized: table
+      +file_format: delta
+      
+    marts:
+      +materialized: incremental
+      +file_format: delta
+      +incremental_strategy: merge
+      +unique_key: event_id

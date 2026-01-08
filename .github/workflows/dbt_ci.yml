@@ -1,0 +1,32 @@
+name: dbt CI/CD
+
+on:
+    push:
+        paths:
+            - "dbt/**"
+
+jobs:
+    dbt_test:
+        name: dbt Build & Test
+        runs-on: ubuntu-latest
+        env:
+            DBT_DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+            DBT_DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+            DBT_DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.9"
+
+            - name: Install dbt-databricks
+              run: pip install dbt-databricks
+
+            - name: dbt Deps
+              run: dbt deps --profiles-dir ./dbt --project-dir ./dbt
+
+            - name: dbt Build (Run & Test)
+              run: dbt build --profiles-dir ./dbt --project-dir ./dbt --target dev
