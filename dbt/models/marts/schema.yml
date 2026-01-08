@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: dim_vehicles
+    description: "Dimension table for vehicles, showing latest known state"
+    columns:
+      - name: vehicle_id
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_trip_analysis
+    description: "Granular fact table of trip segments (enriched telemetry)"
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+      - name: vehicle_id
+        tests:
+          - not_null
+          # - relationships:
+          #     to: ref('dim_vehicles')
+          #     field: vehicle_id
+
+  - name: fct_daily_fleet_summary
+    description: "Daily aggregated performance metrics per vehicle"
+    columns:
+      - name: vehicle_day_id
+        tests:
+          - unique
+          - not_null
