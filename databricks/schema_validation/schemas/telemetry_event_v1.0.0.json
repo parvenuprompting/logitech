@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TelemetryEvent",
+  "version": "1.0.0",
+  "description": "Canonical Telemetry Event voor LogiTech Fleet Platform",
+  "type": "object",
+  "required": [
+    "event_id",
+    "timestamp",
+    "vehicle_id",
+    "event_type"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unieke identifier voor dit event (UUID v4)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event creatie tijdstip in ISO 8601 UTC"
+    },
+    "vehicle_id": {
+      "type": "string",
+      "pattern": "^VEH[0-9]{6}$",
+      "description": "Voertuig identifier (format: VEH000000)"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "position",
+        "ignition",
+        "diagnostic",
+        "alert"
+      ],
+      "description": "Het type event, bepaalt de structuur van de payload"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Eventspecifieke data",
+      "properties": {
+        "latitude": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "longitude": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "speed_kmh": {
+          "type": "number",
+          "minimum": 0
+        },
+        "heading": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "fuel_level_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "engine_temp_c": {
+          "type": "number"
+        },
+        "diagnostic_codes": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.\\d+\\.\\d+$",
+      "description": "Semver versie van dit schema (moet 1.x.x zijn)"
+    }
+  },
+  "additionalProperties": false
+}
