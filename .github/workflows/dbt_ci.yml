@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "dbt/**"
+      - ".github/workflows/**"
 
 jobs:
   dbt_test:
