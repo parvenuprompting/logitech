@@ -1,0 +1,70 @@
+{
+    "type": "struct",
+    "fields": [
+        {
+            "name": "event_id",
+            "type": "string",
+            "nullable": false
+        },
+        {
+            "name": "vehicle_id",
+            "type": "string",
+            "nullable": false
+        },
+        {
+            "name": "timestamp",
+            "type": "timestamp",
+            "nullable": false
+        },
+        {
+            "name": "event_type",
+            "type": "string",
+            "nullable": false
+        },
+        {
+            "name": "latitude",
+            "type": "double",
+            "nullable": true
+        },
+        {
+            "name": "longitude",
+            "type": "double",
+            "nullable": true
+        },
+        {
+            "name": "speed_kmh",
+            "type": "double",
+            "nullable": true
+        },
+        {
+            "name": "heading",
+            "type": "double",
+            "nullable": true
+        },
+        {
+            "name": "fuel_level_percent",
+            "type": "double",
+            "nullable": true
+        },
+        {
+            "name": "engine_temp_c",
+            "type": "double",
+            "nullable": true
+        },
+        {
+            "name": "is_valid",
+            "type": "boolean",
+            "nullable": false
+        },
+        {
+            "name": "validation_error",
+            "type": "string",
+            "nullable": true
+        },
+        {
+            "name": "processed_at",
+            "type": "timestamp",
+            "nullable": false
+        }
+    ]
+}

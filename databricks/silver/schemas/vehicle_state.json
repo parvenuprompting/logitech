@@ -1,0 +1,35 @@
+{
+    "type": "struct",
+    "fields": [
+        {
+            "name": "vehicle_id",
+            "type": "string"
+        },
+        {
+            "name": "last_seen",
+            "type": "timestamp"
+        },
+        {
+            "name": "current_location",
+            "type": "struct",
+            "fields": [
+                {
+                    "name": "lat",
+                    "type": "double"
+                },
+                {
+                    "name": "lon",
+                    "type": "double"
+                }
+            ]
+        },
+        {
+            "name": "status",
+            "type": "string"
+        },
+        {
+            "name": "fuel_level",
+            "type": "double"
+        }
+    ]
+}
