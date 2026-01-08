@@ -4,7 +4,12 @@ import json
 import random
 import os
 from datetime import datetime
-from azure.eventhub import EventHubProducerClient, EventData
+
+try:
+    from azure.eventhub import EventHubProducerClient, EventData
+except ImportError:
+    EventHubProducerClient = None
+    EventData = None
 
 # Config
 EVENT_HUB_CONNECTION_STR = os.getenv("EVENT_HUB_CONNECTION_STR")
@@ -54,9 +59,29 @@ def generate_event(vehicle_id):
     return payload
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", action="store_true", help="Print events to stdout instead of sending to Event Hub")
+    args = parser.parse_args()
+
+    if args.dry_run:
+        print(f"Starting DRY RUN simulation for {NUM_VEHICLES} vehicles.")
+        print(f"Generating {EVENTS_PER_SEC} events/sec. Press Ctrl+C to stop.")
+        try:
+            while True:
+                for _ in range(EVENTS_PER_SEC):
+                    vehicle_id = random.choice(VEHICLE_IDS)
+                    event_data = generate_event(vehicle_id)
+                    print(json.dumps(event_data))
+                time.sleep(1.0)
+        except KeyboardInterrupt:
+            print("Simulation stopped.")
+        return
+
     if not EVENT_HUB_CONNECTION_STR:
         print("ERROR: EVENT_HUB_CONNECTION_STR environment variable not set.")
         print("Usage: export EVENT_HUB_CONNECTION_STR='...'; python simulate_events.py")
+        print("Or use --dry-run for local testing.")
         return
 
     producer = EventHubProducerClient.from_connection_string(

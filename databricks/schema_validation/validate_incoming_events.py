@@ -8,7 +8,9 @@ import os
 
 # Helper om schema te laden (in productie zou dit van Schema Registry komen)
 def load_schema(version="1.0.0"):
-    schema_path = f"schemas/telemetry_event_v{version}.json"
+    # Resolve absolute path relative to this script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    schema_path = os.path.join(script_dir, "schemas", f"telemetry_event_v{version}.json")
     try:
         with open(schema_path, 'r') as f:
             return json.load(f)
