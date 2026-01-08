@@ -83,6 +83,11 @@ dbt deps
 dbt run
 ```
 
+### CI/CD Status Status
+⚠️ **Note:** De CI/CD pipeline (`.github/workflows/dbt_ci.yml`) is volledig geconfigureerd om dbt tests te draaien op Databricks.
+In deze publieke/demo repository zal de pipeline echter **falen** omdat de benodigde secrets (`DATABRICKS_HOST`, `DATABRICKS_TOKEN`) niet zijn ingesteld.
+Dit is by design voor security redenen in dit portfolio project.
+
 ## 📋 Development Workflow
 
 ### Fase 0: Architectuur & Governance ✅
