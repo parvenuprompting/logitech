@@ -32,38 +32,30 @@ def get_logic_config(feature_name):
 
 # COMMAND ----------
 
-# Mock Weather UDFs
-def get_weather_v1(lat, lon, time):
-    return "Sunny" # Placeholder
-
-def get_weather_v2_api(lat, lon, time):
-    # Call to external API (e.g. OpenWeatherMap)
-    # Rate limited! In prod usage: Batch lookup or join with ingested weather dataset.
-    return "Rainy" # Mock
-
-get_weather_udf = udf(get_weather_v1) # Default to v1
-
-# COMMAND ----------
 
 def enrich_batch(df, epoch_id):
-    # 1. Check Feature Version for Weather
-    weather_config = get_logic_config("weather_enrichment")
+    # 1. Weather Enrichment via Broadcast Join (Best Practice)
+    # Avoid UDFs for external lookups. Join with a pre-loaded/cached dataset.
     
-    # Dynamic Logic Selection
-    if weather_config and weather_config.version.startswith("v2"):
-        # Use V2 logic (e.g. API based)
-        weather_expr = lit("Rainy (V2)") 
-    else:
-        # Use V1 logic (Static/Mock)
-        weather_expr = lit("Sunny (V1)")
-        
-    # 2. Enrich
-    # Join with Vehicle Dimension (Broadcast)
-    # Assuming silver.vehicles exists (if not, we mock it or left join fails gracefully)
-    # vehicles = spark.table("silver.vehicles")
+    # Mock Weather Dataset (In prod: spark.table("gold.weather_grid"))
+    weather_data = [
+        (52, 4, "Rainy"),
+        (52, 5, "Cloudy"),
+        (51, 4, "Sunny"),
+        (51, 5, "Stormy")
+    ]
+    weather_schema = ["grid_lat", "grid_lon", "weather_lookup"]
+    weather_df = spark.createDataFrame(weather_data, weather_schema)
     
-    enriched = df.withColumn("weather_condition", weather_expr) \
-                 .withColumn("region", lit("EU-West")) # Placeholder for Geo-lookup
+    # Join Logic: Round coordinates to join with grid
+    # Using broadcast() for efficiency as weather reference data is small relative to telemetry
+    df_prepared = df.withColumn("grid_lat", round(col("latitude"), 0).cast("long")) \
+                    .withColumn("grid_lon", round(col("longitude"), 0).cast("long"))
+    
+    enriched = df_prepared.join(broadcast(weather_df), ["grid_lat", "grid_lon"], "left") \
+        .withColumn("weather_condition", coalesce(col("weather_lookup"), lit("Unknown"))) \
+        .drop("grid_lat", "grid_lon", "weather_lookup") \
+        .withColumn("region", lit("EU-West")) # Placeholder for Geo-lookup
     
     # 3. Write
     enriched.write \

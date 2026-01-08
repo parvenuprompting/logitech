@@ -29,7 +29,13 @@ calculated as (
             when speed_kmh is not null and (unix_timestamp(event_at) - unix_timestamp(prev_event_at)) > 0
             then (speed_kmh / 3600.0) * (unix_timestamp(event_at) - unix_timestamp(prev_event_at))
             else 0 
-        end as distance_km
+        end as distance_km,
+
+        -- Validation: Flag unrealistic speeds (Teleportation check)
+        case
+            when speed_kmh > 150 then 'invalid_teleportation_error'
+            else 'valid'
+        end as segment_qa_status
 
     from with_lag
     where prev_event_at is not null

@@ -12,47 +12,43 @@
 
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
-import json
+import sys
+import os
+
+# Add current directory to path to import local modules (for standard python execution)
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from schema_loader import load_schema_from_json
+except ImportError:
+    # Fallback for Databricks Notebook execution where files are in same dir but need help
+    # Or assuming the user will handle the library installation. 
+    # For now, we assume schema_loader is available.
+    pass
 
 # Config
 BRONZE_TABLE = "bronze.telemetry"
 SILVER_TABLE = "silver.trip_events"
 CHECKPOINT_PATH = "/mnt/datalake/checkpoints/silver_validate_dedup"
-SCHEMA_PATH = "schemas/trip_event.json"
+# Adjust path relative to this script: ../schema_validation/schemas/telemetry_event_v1.0.0.json
+SCHEMA_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "schema_validation/schemas/telemetry_event_v1.0.0.json")
 
 # Load Target Schema
-with open(SCHEMA_PATH, 'r') as f:
-    schema_json = json.load(f)
-    # Convert JSON schema to Spark StructType (Simplified mapping)
-    # In prod: use robust converter or schema registry fetch
-    # Here: Manual definition matching json for robust parsing
-    silver_schema = StructType([
-        StructField("event_id", StringType(), False),
-        StructField("vehicle_id", StringType(), False),
-        StructField("timestamp", TimestampType(), False),
-        StructField("event_type", StringType(), False),
-        StructField("latitude", DoubleType(), True),
-        StructField("longitude", DoubleType(), True),
-        StructField("speed_kmh", DoubleType(), True),
-        StructField("heading", DoubleType(), True),
-        StructField("fuel_level_percent", DoubleType(), True),
-        StructField("engine_temp_c", DoubleType(), True)
-    ])
+try:
+    silver_schema = load_schema_from_json(SCHEMA_PATH)
+except Exception as e:
+    print(f"Error loading schema from {SCHEMA_PATH}: {e}")
+    # Fallback or exit? Raising error is safer to enforce governance.
+    raise e
 
 # COMMAND ----------
 
 def process_bronze_batch(df, epoch_id):
-    # 1. Deduplicatie
-    # Bronze is append-only, duplicates possible due to at-least-once delivery.
-    # We deduplicate on unique event_id within the micro-batch window.
-    # For robust global dedup, we rely on Delta MERGE or watermark dropDuplicates in stream.
-    # Hier: Start with simple dropDuplicates.
-    
-    deduped = df.dropDuplicates(["vehicle_id", "timestamp"]) # or event_id if reliable
+    # 1. Deduplicatie moved to Stream Definition (see below) to use Watermark & State Store
     
     # 2. Parse Payload
     # Extract fields from raw_json
-    parsed = deduped.withColumn("data", from_json(col("raw_payload"), silver_schema)) \
+    parsed = df.withColumn("data", from_json(col("raw_payload"), silver_schema)) \
         .select(
             col("vehicle_id"), # From bronze partition/col
             col("timestamp"),
@@ -79,10 +75,7 @@ def process_bronze_batch(df, epoch_id):
         .otherwise(None)
     )
 
-    # 4. Write to Silver (Merge to handle late arriving duplicates if using MERGE strategy)
-    # For high throughput, APPEND is better, handling dupes downstream or via unique constraint (not yet in Delta OSS fully).
-    # We use APPEND here for speed.
-    
+    # 4. Write to Silver
     validated.write \
         .format("delta") \
         .mode("append") \
@@ -91,11 +84,14 @@ def process_bronze_batch(df, epoch_id):
 # COMMAND ----------
 
 # Stream from Bronze
+# Added withWatermark and dropDuplicates here to fix Memory Leak risk (Stateful Deduplication)
 stream = spark.readStream \
     .format("delta") \
     .table(BRONZE_TABLE) \
+    .withWatermark("timestamp", "10 minutes") \
+    .dropDuplicates(["vehicle_id", "timestamp"]) \
     .writeStream \
     .foreachBatch(process_bronze_batch) \
     .option("checkpointLocation", CHECKPOINT_PATH) \
-    .trigger(availableNow=True) # Batch mode triggering for Silver
+    .trigger(availableNow=True) \
     .start()
